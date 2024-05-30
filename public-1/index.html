@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <h1>しりとり</h1>
+  <!-- 現在の単語を表示する場所 -->
+  <p class="po" id="previousWord"></p>
+  <!-- 次の単語の入力フォーム -->
+  <p>このしりとりアプリでは、漢字は使えませんが、ひらがなとカタカナは使えるようにしました。</p>
+  <p>※ 送信するときは、Enterキーを押し、リセットするときは、Shiftキーを押してください</p>
+  <p>ルールはシンプル、最後の単語が「ん」と「同じ単語」を使ったらゲームが終了します。</p>
+  <p>そうした場合にはリセットボタンを押して、また最初からやってみてください。</p>
+  <p>それでは、楽しんで遊んでください。</p>
+
+  <p>前の単語の最後の字につづく単語を入力してください。</p>
+  <input id="nextWordInput" type="text" />
+  <button id="nextWordSendButton">送信</button>
+  <button id="resetSendButton">リセット</button>
+
+  <!-- JavaScriptを実行 -->
+  <script>
+    window.onload = async (event) => {
+      // GET /shiritoriを実行
+      const response = await fetch("/shiritori", { method: "GET" });
+      // responseの中からレスポンスのテキストデータを取得
+      const previousWord = await response.text();
+      // id: previousWordのタグを取得
+      const paragraph = document.querySelector("#previousWord");
+      // 取得したタグの中身を書き換える
+      paragraph.innerHTML = `前の単語: ${previousWord}`;
+    }
+
+    const sendNextWord = async () => {
+      // inputタグを取得
+      const nextWordInput = document.querySelector("#nextWordInput");
+      // inputの中身を取得
+      const nextWordInputText = nextWordInput.value;
+      // POST /shiritoriを実行
+      // 次の単語をresponseに格納
+      const response = await fetch(
+        "/shiritori",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nextWord: nextWordInputText })
+        }
+      );
+
+      // status: 200以外が返ってきた場合にエラーを表示
+      if (response.status !== 200) {
+        const errorJson = await response.text();
+        const errorObj = JSON.parse(errorJson);
+        // errorObj["errorCode"]ごとに処理を分岐する
+        // errorCodeが、末尾が「ん」の時のエラーだったら、ゲームを終了する
+        alert(errorObj["errorMessage"]);
+        return;
+      }
+
+      const previousWord = await response.text();
+
+      // id: previousWordのタグを取得
+      const paragraph = document.querySelector("#previousWord");
+      // 取得したタグの中身を書き換える
+      paragraph.innerHTML = `前の単語: ${previousWord}`;
+      // inputタグの中身を消去する
+      nextWordInput.value = "";
+    };
+
+    const resetGame = async () => {
+      // POST /resetを実行
+      const response = await fetch("/reset", { method: "POST" });
+      // ページをリロードする
+      window.location.reload();
+    };
+
+    // 送信ボタンの押下時に実行
+    document.querySelector("#nextWordSendButton").onclick = async (event) => {
+      await sendNextWord();
+    };
+
+    // Enterキー押下時に送信ボタンの処理を実行
+    document.querySelector("#nextWordInput").addEventListener("keydown", async (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        await sendNextWord();
+      }
+    });
+
+    // リセットボタンの押下時に実行
+    document.querySelector("#resetSendButton").onclick = async (event) => {
+      await resetGame();
+    };
+
+    // Shiftキー押下時にリセットボタンの処理を実行
+    document.addEventListener("keydown", async (event) => {
+      if (event.key === "Shift") {
+        event.preventDefault();
+        await resetGame();
+      }
+    });
+  </script>
+
+</body>
+
+</html>
+
+
+
+
